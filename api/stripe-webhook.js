@@ -3,65 +3,55 @@ const { updateUserByCustomerId, IncrementUserCreditByCustomerId, IncrementUserEx
 const productsData = require("./_products-data.js");
 const stripe = require("./_stripe.js");
 
-const stripWebhook= async (req, res) => {
-  const headers = req.headers;
-  console.log("webhook called");
-  
-
+const stripWebhook = async (req, res) => {
+  const headers = await req.headers;
+  if (!req) {
+    res.send({ status: "error", code: "Not readable" });
+  }
   try {
     const rawBody = await getRawBody(req);
 
-    const stripeEvent = stripe.webhooks.constructEvent(
-      rawBody,
-      headers["stripe-signature"],
-      process.env.STRIPE_WEBHOOK_SECRET
-    );
+    const stripeEvent = stripe.webhooks.constructEvent(rawBody, headers["stripe-signature"], process.env.STRIPE_WEBHOOK_SECRET);
 
     console.log(`stripeEvent: ${stripeEvent.type}`);
 
     // Get the object from stripeEvent
     const object = stripeEvent.data.object;
-    console.log(object)
+    console.log(object);
 
     switch (stripeEvent.type) {
       case "checkout.session.completed":
         // If sunscription Fetch subscription
-        if(object.mode === 'subscription'){
-          const subscription = await stripe.subscriptions.retrieve(
-            object.subscription
-          );
-          const priceId = subscription.items.data[0].price.id
-  
+        if (object.mode === "subscription") {
+          const subscription = await stripe.subscriptions.retrieve(object.subscription);
+          const priceId = subscription.items.data[0].price.id;
+
           // Add subscription info to database
           await updateUserByCustomerId(object.customer, {
             stripeSubscriptionId: subscription.id,
             // Store the Price ID for this subscription
             stripePriceId: priceId,
             // Store the subscription status ("active" or "trialing")
-            stripeSubscriptionStatus: "active"//subscription.status,
+            stripeSubscriptionStatus: "active", //subscription.status,
           });
           // await IncrementUserCreditByCustomerId(object.customer, productsData[priceId].quantity);
-        } 
+        }
         //if One time purchase, fetch purchased items
         else {
-          const sessionWithLineItems = await stripe.checkout.sessions.retrieve(
-            object.id,
-            {
-              expand: ['line_items'],
-            }
-          );
-          console.log(sessionWithLineItems)
+          const sessionWithLineItems = await stripe.checkout.sessions.retrieve(object.id, {
+            expand: ["line_items"],
+          });
+          console.log(sessionWithLineItems);
           const lineItems = sessionWithLineItems.line_items.data;
-          console.log(lineItems)
-          let totalCreditBought = 0
-          for (const item of lineItems){
-            const priceId = item.price.id
-            const creditBought = productsData[priceId].quantity * item.quantity
-            totalCreditBought = totalCreditBought + creditBought
+          console.log(lineItems);
+          let totalCreditBought = 0;
+          for (const item of lineItems) {
+            const priceId = item.price.id;
+            const creditBought = productsData[priceId].quantity * item.quantity;
+            totalCreditBought = totalCreditBought + creditBought;
           }
           await IncrementUserExtraCreditByCustomerId(object.customer, totalCreditBought);
         }
-        
 
         break;
 
@@ -74,10 +64,8 @@ const stripWebhook= async (req, res) => {
             stripeSubscriptionStatus: "active",
           });
 
-          const subscription = await stripe.subscriptions.retrieve(
-            object.subscription
-          );
-          const priceId = subscription.items.data[0].price.id
+          const subscription = await stripe.subscriptions.retrieve(object.subscription);
+          const priceId = subscription.items.data[0].price.id;
           await updateUserCreditByCustomerId(object.customer, productsData[priceId].quantity);
         }
 
