@@ -1,6 +1,6 @@
 const getRawBody = require("raw-body");
 const { updateUserByCustomerId, IncrementUserCreditByCustomerId, IncrementUserExtraCreditByCustomerId, updateUserCreditByCustomerId } = require("./_db.js");
-const productsData = require("./_products-data.js");
+const {productsData} = require("./_products-data.js");
 const stripe = require("./_stripe.js");
 
 const stripWebhook = async (req, res) => {

@@ -28,4 +28,4 @@ const productsData = {
 
 
 
-module.exports = productsData
+module.exports = {productsData,products}

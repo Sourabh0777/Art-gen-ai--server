@@ -1,17 +1,59 @@
+const { updateUserByCustomerId, IncrementUserCreditByCustomerId, IncrementUserExtraCreditByCustomerId, updateUserCreditByCustomerId, getUserByEmail, updateUser } = require("./_db.js");
+const { products } = require("./_products-data.js");
+
 const coinGateWebhook = async (req, res) => {
   try {
     const { order_id, status } = req.body;
-    console.log("🚀 ~ coinGateWebhook ~ req.body:", req.body)
-    console.log("🚀 ~ coinGateWebhook ~ order_id:")
-    console.log("🚀 ~ coinGateWebhook ~ order_id:", order_id)
+    let [planID, email] = order_id.split("+");
 
-    // Update Firestore subscription status
-    // await db.collection("subscriptions").doc(order_id).update({ status });
+    const product = products[planID];
+    if (!product) {
+      console.error("Invalid order ID:", order_id);
+      return res.status(400).send({ status: "error", message: "Invalid order ID" });
+    }
 
-    res.status(200).send("Webhook received");
+    // Process status
+    switch (status) {
+      case "paid":
+        if (product.type === "payment") {
+          // Increment user credits for one-time purchases
+          await IncrementUserExtraCreditByCustomerId(email, product.quantity);
+        } else if (product.type === "subscription") {
+          const user = await getUserByEmail(email);
+
+          await updateUser(user.id, {
+            stripeSubscriptionId: planID,
+            stripePriceId:product.price,
+            subscriptionCycle: product.cycle,
+            stripeSubscriptionStatus: "active",
+            credit:product.quantity
+          });
+        }
+        break;
+
+      case "failed":
+        console.log("Payment failed for order:", order_id);
+        break;
+
+      case "canceled":
+        if (product.type === "subscription") {
+          // Handle subscription cancellation
+          await updateUserByCustomerId(req.body.customer_id, {
+            subscriptionPlan: null,
+            subscriptionStatus: "canceled",
+          });
+        }
+        break;
+
+      default:
+        console.log("Unhandled status:", status);
+        break;
+    }
+
+    res.status(200).send({ status: "success" });
   } catch (error) {
     console.error("Webhook error:", error);
-    res.status(400).send("Error handling webhook");
+    res.status(400).send({ status: "error", message: error.message });
   }
 };
 module.exports = { coinGateWebhook };
