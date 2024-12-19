@@ -1,7 +1,7 @@
 const requireAuth = require("./_require-auth.js");
 const { getUser, updateUser } = require("./_db.js");
 const stripe = require("./_stripe.js");
-const productsData = require("./_products-data.js");
+const {productsData} = require("./_products-data.js");
 
 const stripeCheckoutSession = requireAuth(async (req, res) => {
   const body = req.body;

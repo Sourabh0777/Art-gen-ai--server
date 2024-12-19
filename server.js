@@ -19,10 +19,10 @@ app.post('/api/stripe-create-checkout-session', stripeCheckoutSession);
 
 // Coingate APIs
 
-app.post("/create-subscription",createSubscription)
+app.post("/api/create-subscription",createSubscription)
 app.use(express.json());
 
-app.post("/coin-gate-Webhook",coinGateWebhook)
+app.post("/api/coin-gate-Webhook",coinGateWebhook)
 
 const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
