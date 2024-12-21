@@ -3,10 +3,11 @@ const { products } = require("./_products-data.js");
 
 const coinGateWebhook = async (req, res) => {
   try {
-    const { order_id, status } = req.body;
-    let [planID, email] = order_id.split("+");
+    const { order_id, status } =await req.body;
+    console.log("🚀 ~ coinGateWebhook ~ req.body:", req.body)
+    let [planID, email] =await order_id.split("+");
 
-    const product = products[planID];
+    const product =await products[planID.toUpperCase()];
     if (!product) {
       console.error("Invalid order ID:", order_id);
       return res.status(400).send({ status: "error", message: "Invalid order ID" });
